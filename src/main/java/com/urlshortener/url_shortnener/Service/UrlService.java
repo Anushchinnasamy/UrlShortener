@@ -1,25 +1,41 @@
 package com.urlshortener.url_shortnener.Service;
 
 import com.urlshortener.url_shortnener.Entity.Url;
+import com.urlshortener.url_shortnener.Exceptions.BadRequestException;
+import com.urlshortener.url_shortnener.Exceptions.ResourceNotFoundException;
 import com.urlshortener.url_shortnener.Repository.UrlRepository;
 import com.urlshortener.url_shortnener.Util.Base62Encoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class UrlService {
 
+    private static final Logger log = LoggerFactory.getLogger(UrlService.class);
+
     @Autowired
     private UrlRepository urlRepository;
 
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
     public Map<String, String> createShortUrl(String longUrl) {
+
+        if (longUrl == null || longUrl.isBlank()) {
+            throw new BadRequestException("URL is required");
+        }
 
         // Save URL first
         Url url = new Url();
         url.setLongUrl(longUrl);
+        url.setClickCount(0L);
 
         Url savedUrl = urlRepository.save(url);
 
@@ -30,7 +46,7 @@ public class UrlService {
         savedUrl.setShortCode(shortCode);
         urlRepository.save(savedUrl);
 
-        String shortUrl = "http://localhost:8080/" + shortCode;
+        String shortUrl = "http://localhost:8080/r/" + shortCode;
 
         Map<String, String> response = new HashMap<>();
         response.put("shortUrl", shortUrl);
@@ -40,11 +56,44 @@ public class UrlService {
 
     public Url getOriginalUrl(String shortCode) {
 
-        Url url = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new RuntimeException("URL not found"));
+        if (shortCode == null || shortCode.isBlank()) {
+            throw new BadRequestException("shortCode is required");
+        }
 
-        // Increment click count
-        url.setClickCount(url.getClickCount() + 1);
+        // 1. Check Redis
+        String cachedUrl = null;
+        try {
+            cachedUrl = redisTemplate.opsForValue().get(shortCode);
+            log.debug("Redis lookup shortCode={} hit={}", shortCode, cachedUrl != null);
+        } catch (Exception ex) {
+            // Redis is an optional layer; never break redirect/analytics because of it.
+            log.warn("Redis lookup failed for shortCode={}: {}", shortCode, ex.getMessage());
+        }
+
+        Url url;
+
+        url = urlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new ResourceNotFoundException("URL not found"));
+
+        // Cache longUrl when missing/blank in cache (best-effort).
+        if (cachedUrl == null) {
+            try {
+                if (url.getLongUrl() != null && !url.getLongUrl().isBlank()) {
+                    redisTemplate.opsForValue().set(shortCode, url.getLongUrl(), 10, TimeUnit.MINUTES);
+                    log.debug("Redis set shortCode={} ttlMinutes=10", shortCode);
+                }
+            } catch (Exception ex) {
+                log.warn("Redis set failed for shortCode={}: {}", shortCode, ex.getMessage());
+            }
+        }
+
+        // 2. ALWAYS increment click count
+        url.setClickCount(
+                (url.getClickCount() == null ? 0 : url.getClickCount()) + 1
+        );
+
+        log.info("Redirect resolved shortCode={} clickCount={}", shortCode, url.getClickCount());
+
         urlRepository.save(url);
 
         return url;
@@ -53,7 +102,7 @@ public class UrlService {
     public Map<String, Object> getAnalytics(String shortCode) {
 
         Url url = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new RuntimeException("URL not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("URL not found"));
 
         Map<String, Object> response = new HashMap<>();
         response.put("shortCode", url.getShortCode());

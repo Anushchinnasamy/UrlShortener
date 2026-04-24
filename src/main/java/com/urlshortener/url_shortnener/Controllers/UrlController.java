@@ -16,8 +16,8 @@ public class UrlController {
     private UrlService urlService;
 
     @PostMapping("/shorten")
-    public Map<String, String> shortenUrl(@RequestBody Map<String, String> request) {
-        return urlService.createShortUrl(request.get("url"));
+    public Map<String, String> shortenUrl(@RequestBody com.urlshortener.url_shortnener.DTO.CreateShortUrlRequest request) {
+        return urlService.createShortUrl(request.getUrl());
     }
 
     @GetMapping("/analytics/{shortCode}")
