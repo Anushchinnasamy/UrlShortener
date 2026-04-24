@@ -1,213 +1,128 @@
-# 🔗 URL Shortener with Analytics
+# 🔗 URL Shortener (Spring Boot) — Dockerized, Production-ready
 
-A scalable URL shortener service built using Spring Boot and PostgreSQL that converts long URLs into short, shareable links and tracks usage analytics.
-
----
-
-## 🚀 Features
-
-* 🔗 Shorten long URLs into compact Base62 encoded links
-* 🔁 Redirect short URLs to original URLs
-* 📊 Track click count analytics for each URL
-* 🗄️ Persistent storage using PostgreSQL
-* ⚡ RESTful API design using Spring Boot
-* 🧠 Efficient encoding using Base62 algorithm
+A URL shortener backend built with **Spring Boot 3**, **PostgreSQL**, **Redis caching**, and **JWT authentication**.
+It generates **Base62** short codes, supports redirects, and exposes click analytics.
 
 ---
 
-## 🛠️ Tech Stack
+## ✅ Features
 
-* **Backend:** Spring Boot (Java)
-* **Database:** PostgreSQL
-* **ORM:** JPA / Hibernate
-* **Build Tool:** Maven
-* **API Testing:** Postman
-
----
-
-## 📌 API Endpoints
-
-### 1️⃣ Create Short URL
-
-```http
-POST /api/shorten
-```
-
-**Request Body:**
-
-```json
-{
-  "url": "https://google.com"
-}
-```
-
-**Response:**
-
-```json
-{
-  "shortUrl": "http://localhost:8080/b"
-}
-```
+- **URL shortening** with Base62 encoding
+- **Redirects** via `GET /r/{shortCode}`
+- **Analytics** (click count) via JWT-protected endpoint
+- **PostgreSQL** persistence using Spring Data JPA / Hibernate
+- **Redis** caching layer (best-effort; app still works if Redis is down)
+- **JWT auth** (secret + expiration via environment variables)
+- **Swagger/OpenAPI** docs (toggleable for production)
+- **Actuator health** endpoint for container health checks
+- **Docker + docker-compose** for local/prod-like deployments
 
 ---
 
-### 2️⃣ Redirect to Original URL
+## 🧱 Tech stack
 
-```http
-GET /{shortCode}
-```
-
-**Example:**
-
-```
-http://localhost:8080/b
-```
-
-👉 Redirects to the original URL
+- **Java 17**
+- **Spring Boot 3.x**
+- **Spring Web**, **Spring Security**
+- **Spring Data JPA (Hibernate)** + **PostgreSQL**
+- **Spring Data Redis** + **Redis**
+- **JJWT** for token signing/verification
+- **springdoc-openapi** (Swagger UI)
+- **Spring Boot Actuator**
+- **Docker** / **Docker Compose**
 
 ---
 
-### 3️⃣ Get Analytics
+## 📌 API overview (brief)
 
-```http
-GET /api/analytics/{shortCode}
-```
+### Auth
+- `POST /auth/register` — register user
+- `POST /auth/login` — login, returns JWT token
 
-**Response:**
+### URLs (JWT protected)
+- `POST /api/shorten` — create short URL
+- `GET /api/analytics/{shortCode}` — click analytics
 
-```json
-{
-  "shortCode": "b",
-  "longUrl": "https://google.com",
-  "clickCount": 5
-}
-```
+### Redirect (public)
+- `GET /r/{shortCode}` — 302 redirect to the long URL  
+  (Note: Swagger “Try it out” may show *Failed to fetch* due to browser redirect/CORS behavior; test redirects via normal browser address bar.)
 
----
-
-## 🧠 How It Works
-
-1. Long URL is stored in the database
-2. Database generates a unique ID
-3. ID is converted to Base62 encoded string
-4. Short URL is returned to the user
-5. On access:
-
-   * Short code is looked up in DB
-   * User is redirected
-   * Click count is incremented
+### Health
+- `GET /actuator/health` — returns UP (used by docker-compose healthcheck)
 
 ---
 
-## 🗂️ Project Structure
+## ⚙️ Configuration (environment variables)
 
-```
-src/main/java/com/urlshortener
-│
-├── Controllers
-│   ├── UrlController.java
-│   └── RedirectController.java
-│
-├── Entity
-│   └── Url.java
-│
-├── Repository
-│   └── UrlRepository.java
-│
-├── Util
-│   └── Base62Encoder.java
-│
-└── UrlShortenerApplication.java
-```
+The app reads config from env vars with safe defaults.
+
+| Variable | Default | Purpose |
+|---|---:|---|
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/urlshortener` | DB connection |
+| `SPRING_DATASOURCE_USERNAME` | `postgres` | DB user |
+| `SPRING_DATASOURCE_PASSWORD` | `password` | DB password |
+| `SPRING_DATA_REDIS_HOST` | `localhost` | Redis host |
+| `SPRING_DATA_REDIS_PORT` | `6379` | Redis port |
+| `APP_BASE_URL` | `http://localhost:8080` | Used to build returned short URLs |
+| `JWT_SECRET` | `change-me-in-prod-...` | JWT signing secret (HS256) |
+| `JWT_EXPIRATION_MS` | `3600000` | Token validity |
+| `SWAGGER_ENABLED` | `false` | Enable/disable Swagger UI + docs |
 
 ---
 
-## ⚙️ Setup Instructions
+## ▶️ Run locally (no Docker)
 
-### 1️⃣ Clone Repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/url-shortener.git
-cd url-shortener
-```
-
----
-
-### 2️⃣ Configure Database
-
-Create PostgreSQL database:
-
-```sql
-CREATE DATABASE url_shortener;
-```
-
-Update `application.properties`:
-
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/url_shortener
-spring.datasource.username=postgres
-spring.datasource.password=YOUR_PASSWORD
-
-spring.jpa.hibernate.ddl-auto=update
-```
-
----
-
-### 3️⃣ Run Application
+Requirements: Java 17, PostgreSQL, Redis (optional)
 
 ```bash
 mvn spring-boot:run
 ```
 
----
-
-### 4️⃣ Test APIs
-
-Use Postman or curl to test endpoints.
+Then open:
+- Health: `http://localhost:8080/actuator/health`
 
 ---
 
-## 📈 Future Enhancements
+## 🐳 Run with Docker Compose (recommended)
 
-* 🚀 Redis caching for faster lookups
-* 🔐 JWT authentication for user accounts
-* 📉 Rate limiting to prevent abuse
-* 🐳 Docker containerization
-* ☁️ Deployment on Azure / AWS
-* 📊 Advanced analytics (time-based, geo tracking)
+```bash
+docker compose up --build
+```
 
----
+Open:
+- Health: `http://localhost:8080/actuator/health`
 
-## 🧪 Sample Workflow
+Enable Swagger (optional):
 
-1. Create short URL via API
-2. Open short link in browser
-3. Check analytics endpoint
+```bash
+SWAGGER_ENABLED=true docker compose up --build
+```
 
----
-
-## 💡 Key Concepts Used
-
-* Base62 Encoding
-* REST API Design
-* JPA & ORM Mapping
-* Database-driven unique ID generation
-* MVC Architecture
+Swagger UI:
+- `http://localhost:8080/swagger-ui/index.html`
 
 ---
 
-## 👨‍💻 Author
+## 🧭 Architecture (text diagram)
 
-**Anush**
+```
+Client
+  ├─ AuthController  ──> UserService ──> UserRepository ──> PostgreSQL
+  ├─ UrlController   ──> UrlService  ──> UrlRepository  ──> PostgreSQL
+  │                                  └─ RedisTemplate (best-effort cache)
+  └─ RedirectController ─────────────> UrlService (resolve + increment clicks)
+```
 
 ---
 
-## ⭐ Acknowledgement
+## 📷 Screenshots
 
-Inspired by real-world URL shortening services like Bitly.
+- Swagger UI: *(add screenshot here)*
+- Docker Compose running: *(add screenshot here)*
 
 ---
 
-## 📜 License
+## 📄 License
 
-This project is for educational purposes.
+MIT (or choose your preferred license).
+

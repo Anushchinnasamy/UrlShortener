@@ -1,24 +1,21 @@
-package com.urlshortener.url_shortnener.Entity;
+package com.urlshortener.url_shortener.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
 @Data
+@Table(name = "users")
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Url {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(unique = true)
-    private String shortCode;
+    private String username;
 
-    @Column(columnDefinition = "TEXT")
-    private String longUrl;
-
-    private Long clickCount = 0L;
+    private String password;
 }

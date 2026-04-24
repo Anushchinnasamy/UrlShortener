@@ -1,4 +1,4 @@
-package com.urlshortener.url_shortnener.Util;
+package com.urlshortener.url_shortener.Util;
 
 public class Base62Encoder {
 

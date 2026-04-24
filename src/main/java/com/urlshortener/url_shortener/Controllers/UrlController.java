@@ -1,8 +1,8 @@
-package com.urlshortener.url_shortnener.Controllers;
+package com.urlshortener.url_shortener.Controllers;
 
 
 
-import com.urlshortener.url_shortnener.Service.UrlService;
+import com.urlshortener.url_shortener.Service.UrlService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,8 +16,8 @@ public class UrlController {
     private UrlService urlService;
 
     @PostMapping("/shorten")
-    public Map<String, String> shortenUrl(@RequestBody Map<String, String> request) {
-        return urlService.createShortUrl(request.get("url"));
+    public Map<String, String> shortenUrl(@RequestBody com.urlshortener.url_shortener.DTO.CreateShortUrlRequest request) {
+        return urlService.createShortUrl(request.getUrl());
     }
 
     @GetMapping("/analytics/{shortCode}")

@@ -1,0 +1,11 @@
+target
+.idea
+.vscode
+*.iml
+**/*.log
+**/logs
+**/.DS_Store
+node_modules
+coverage
+.git
+.github
