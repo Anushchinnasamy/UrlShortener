@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply antialiased selection:bg-indigo-500/30 selection:text-white;
+  }
+}
+
+@layer utilities {
+  .bg-grid {
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.12) 1px, transparent 0);
+    background-size: 26px 26px;
+  }
+
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-glow;
+  }
+
+  .text-grad {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-sky-200 to-fuchsia-300;
+  }
+}
+

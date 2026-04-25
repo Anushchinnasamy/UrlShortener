@@ -1,0 +1,68 @@
+═══════════════════════════════════════════════════════════════
+  🔧 FIX: "User not found" Error
+═══════════════════════════════════════════════════════════════
+
+PROBLEM:
+  - Registration works
+  - Login fails: "User not found"
+  - Forgot password fails: "User not found"
+
+CAUSE:
+  Database missing email column
+
+═══════════════════════════════════════════════════════════════
+
+SOLUTION (Choose One):
+
+─────────────────────────────────────────────────────────────
+  Option 1: AUTOMATED (Easiest - 30 seconds)
+─────────────────────────────────────────────────────────────
+
+  Run this in PowerShell:
+
+    ./fix-database.ps1
+
+  Done! ✅
+
+─────────────────────────────────────────────────────────────
+  Option 2: MANUAL (2 minutes)
+─────────────────────────────────────────────────────────────
+
+  1. Stop backend:
+     Get-Process -Name java | Stop-Process -Force
+
+  2. Recreate database:
+     $env:PGPASSWORD = "password"
+     psql -U postgres -c "DROP DATABASE IF EXISTS urlshortener;"
+     psql -U postgres -c "CREATE DATABASE urlshortener;"
+
+  3. Start backend:
+     ./mvnw spring-boot:run
+
+  4. Wait 15 seconds
+
+  Done! ✅
+
+═══════════════════════════════════════════════════════════════
+
+TEST AFTER FIX:
+
+  1. Register: http://localhost:5173/register
+     - Username: testuser
+     - Email: test@example.com
+     - Password: password123
+
+  2. Login: http://localhost:5173/login
+     - Email: test@example.com
+     - Password: password123
+     ✅ Should work now!
+
+  3. Forgot Password: http://localhost:5173/forgot-password
+     - Email: test@example.com
+     ✅ Should work now!
+
+═══════════════════════════════════════════════════════════════
+
+RECOMMENDED: Run ./fix-database.ps1
+
+═══════════════════════════════════════════════════════════════

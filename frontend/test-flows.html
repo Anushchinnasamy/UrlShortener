@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Flow Tests</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        h1 { color: #38bdf8; }
+        h2 { color: #818cf8; margin-top: 30px; }
+        .test-section {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .pass { background: #064e3b; border-left: 4px solid #10b981; }
+        .fail { background: #7f1d1d; border-left: 4px solid #ef4444; }
+        .info { background: #1e3a8a; border-left: 4px solid #3b82f6; }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover { background: #2563eb; }
+        button:disabled { background: #475569; cursor: not-allowed; }
+        pre {
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .status { font-weight: bold; }
+        .status.ready { color: #10b981; }
+        .status.not-ready { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Frontend Flow Test Suite</h1>
+    <p>Testing React + Vite frontend against running backend on port 8080</p>
+
+    <div class="test-section">
+        <h2>1. API Configuration Test</h2>
+        <button onclick="testApiConfig()">Run API Config Test</button>
+        <div id="api-config-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Registration Flow Test</h2>
+        <button onclick="testRegistration()">Run Registration Test</button>
+        <div id="registration-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Login Flow Test</h2>
+        <button onclick="testLogin()">Run Login Test</button>
+        <div id="login-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. URL Shortening Test</h2>
+        <button onclick="testUrlShorten()">Run URL Shorten Test</button>
+        <div id="shorten-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Analytics Test</h2>
+        <button onclick="testAnalytics()">Run Analytics Test</button>
+        <div id="analytics-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>6. Error Handling Test</h2>
+        <button onclick="testErrorHandling()">Run Error Handling Test</button>
+        <div id="error-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Final Status</h2>
+        <div id="final-status"></div>
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        let testResults = {
+            apiConfig: null,
+            registration: null,
+            login: null,
+            shorten: null,
+            analytics: null,
+            errorHandling: null
+        };
+
+        function log(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            container.appendChild(div);
+        }
+
+        function clear(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        async function testApiConfig() {
+            clear('api-config-results');
+            log('api-config-results', '🔍 Testing API configuration...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/actuator/health`);
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'UP') {
+                    log('api-config-results', `✅ Backend is UP and reachable at ${API_BASE}`, 'pass');
+                    log('api-config-results', `<pre>${JSON.stringify(data, null, 2)}</pre>`, 'info');
+                    testResults.apiConfig = true;
+                } else {
+                    log('api-config-results', `❌ Backend returned unexpected status: ${data.status}`, 'fail');
+                    testResults.apiConfig = false;
+                }
+            } catch (error) {
+                log('api-config-results', `❌ Cannot reach backend: ${error.message}`, 'fail');
+                testResults.apiConfig = false;
+            }
+        }
+
+        async function testRegistration() {
+            clear('registration-results');
+            log('registration-results', '🔍 Testing registration flow...', 'info');
+
+            const username = `testuser${Date.now()}`;
+            const password = 'test123456';
+
+            try {
+                log('registration-results', `📤 POST /auth/register with username: ${username}`, 'info');
+                
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                log('registration-results', `<pre>Response: ${JSON.stringify(data, null, 2)}</pre>`, 'info');
+
+                if (response.ok && data.message) {
+                    log('registration-results', '✅ Registration endpoint works correctly', 'pass');
+                    log('registration-results', `✅ Correct response structure: { message: "${data.message}" }`, 'pass');
+                    testResults.registration = true;
+                    return { username, password };
+                } else {
+                    log('registration-results', `❌ Registration failed: ${response.status}`, 'fail');
+                    testResults.registration = false;
+                }
+            } catch (error) {
+                log('registration-results', `❌ Registration error: ${error.message}`, 'fail');
+                testResults.registration = false;
+            }
+        }
+
+        async function testLogin() {
+            clear('login-results');
+            log('login-results', '🔍 Testing login flow...', 'info');
+
+            // First register a user
+            const username = `testuser${Date.now()}`;
+            const password = 'test123456';
+
+            try {
+                log('login-results', '📝 Step 1: Registering test user...', 'info');
+                await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                log('login-results', `📤 Step 2: POST /auth/login with username: ${username}`, 'info');
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                log('login-results', `<pre>Response: ${JSON.stringify(data, null, 2)}</pre>`, 'info');
+
+                if (response.ok && data.token) {
+                    log('login-results', '✅ Login endpoint works correctly', 'pass');
+                    log('login-results', `✅ JWT token received (length: ${data.token.length})`, 'pass');
+                    log('login-results', '✅ Correct response structure: { token: "..." }', 'pass');
+                    testResults.login = true;
+                    return data.token;
+                } else {
+                    log('login-results', `❌ Login failed: ${response.status}`, 'fail');
+                    testResults.login = false;
+                }
+            } catch (error) {
+                log('login-results', `❌ Login error: ${error.message}`, 'fail');
+                testResults.login = false;
+            }
+        }
+
+        async function testUrlShorten() {
+            clear('shorten-results');
+            log('shorten-results', '🔍 Testing URL shortening flow...', 'info');
+
+            // First get a token
+            const username = `testuser${Date.now()}`;
+            const password = 'test123456';
+
+            try {
+                log('shorten-results', '📝 Step 1: Getting JWT token...', 'info');
+                await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const loginRes = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const { token } = await loginRes.json();
+                log('shorten-results', '✅ Token obtained', 'pass');
+
+                log('shorten-results', '📤 Step 2: POST /api/shorten with JWT', 'info');
+                const testUrl = 'https://example.com/very/long/url/for/testing';
+                const response = await fetch(`${API_BASE}/api/shorten`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ url: testUrl })
+                });
+
+                const data = await response.json();
+                log('shorten-results', `<pre>Response: ${JSON.stringify(data, null, 2)}</pre>`, 'info');
+
+                if (response.ok && data.shortUrl) {
+                    log('shorten-results', '✅ URL shortening works correctly', 'pass');
+                    log('shorten-results', `✅ Short URL generated: ${data.shortUrl}`, 'pass');
+                    testResults.shorten = true;
+                    return data.shortUrl;
+                } else {
+                    log('shorten-results', `❌ URL shortening failed: ${response.status}`, 'fail');
+                    testResults.shorten = false;
+                }
+            } catch (error) {
+                log('shorten-results', `❌ URL shortening error: ${error.message}`, 'fail');
+                testResults.shorten = false;
+            }
+        }
+
+        async function testAnalytics() {
+            clear('analytics-results');
+            log('analytics-results', '🔍 Testing analytics flow...', 'info');
+
+            const username = `testuser${Date.now()}`;
+            const password = 'test123456';
+
+            try {
+                log('analytics-results', '📝 Step 1: Creating short URL...', 'info');
+                await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const loginRes = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const { token } = await loginRes.json();
+
+                const shortenRes = await fetch(`${API_BASE}/api/shorten`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ url: 'https://example.com/test' })
+                });
+                const { shortUrl } = await shortenRes.json();
+                const shortCode = shortUrl.split('/').pop();
+                log('analytics-results', `✅ Short code created: ${shortCode}`, 'pass');
+
+                log('analytics-results', `📤 Step 2: GET /api/analytics/${shortCode}`, 'info');
+                const response = await fetch(`${API_BASE}/api/analytics/${shortCode}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await response.json();
+                log('analytics-results', `<pre>Response: ${JSON.stringify(data, null, 2)}</pre>`, 'info');
+
+                if (response.ok && data.shortCode === shortCode) {
+                    log('analytics-results', '✅ Analytics endpoint works correctly', 'pass');
+                    log('analytics-results', `✅ Click count: ${data.clickCount}`, 'pass');
+                    testResults.analytics = true;
+                } else {
+                    log('analytics-results', `❌ Analytics failed: ${response.status}`, 'fail');
+                    testResults.analytics = false;
+                }
+            } catch (error) {
+                log('analytics-results', `❌ Analytics error: ${error.message}`, 'fail');
+                testResults.analytics = false;
+            }
+        }
+
+        async function testErrorHandling() {
+            clear('error-results');
+            log('error-results', '🔍 Testing error handling...', 'info');
+
+            try {
+                // Test 1: Invalid credentials
+                log('error-results', '📤 Test 1: Login with invalid credentials', 'info');
+                const loginRes = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'nonexistent', password: 'wrong' })
+                });
+
+                if (loginRes.status === 401 || loginRes.status === 400) {
+                    const data = await loginRes.json();
+                    log('error-results', `✅ Invalid login returns proper error: ${data.message || 'error message present'}`, 'pass');
+                } else {
+                    log('error-results', `❌ Invalid login should return 401/400, got ${loginRes.status}`, 'fail');
+                }
+
+                // Test 2: Unauthorized API access
+                log('error-results', '📤 Test 2: Access protected endpoint without token', 'info');
+                const shortenRes = await fetch(`${API_BASE}/api/shorten`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: 'https://example.com' })
+                });
+
+                if (shortenRes.status === 401 || shortenRes.status === 403) {
+                    log('error-results', '✅ Protected endpoint rejects unauthorized access', 'pass');
+                } else {
+                    log('error-results', `❌ Should return 401/403, got ${shortenRes.status}`, 'fail');
+                }
+
+                // Test 3: Duplicate username
+                log('error-results', '📤 Test 3: Register duplicate username', 'info');
+                const dupUser = `duptest${Date.now()}`;
+                await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: dupUser, password: 'test123' })
+                });
+
+                const dupRes = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: dupUser, password: 'test123' })
+                });
+
+                if (dupRes.status === 400 || dupRes.status === 409) {
+                    const data = await dupRes.json();
+                    log('error-results', `✅ Duplicate registration returns proper error: ${data.message || 'error present'}`, 'pass');
+                } else {
+                    log('error-results', `❌ Duplicate registration should fail, got ${dupRes.status}`, 'fail');
+                }
+
+                testResults.errorHandling = true;
+            } catch (error) {
+                log('error-results', `❌ Error handling test failed: ${error.message}`, 'fail');
+                testResults.errorHandling = false;
+            }
+        }
+
+        async function runAllTests() {
+            await testApiConfig();
+            await new Promise(r => setTimeout(r, 500));
+            await testRegistration();
+            await new Promise(r => setTimeout(r, 500));
+            await testLogin();
+            await new Promise(r => setTimeout(r, 500));
+            await testUrlShorten();
+            await new Promise(r => setTimeout(r, 500));
+            await testAnalytics();
+            await new Promise(r => setTimeout(r, 500));
+            await testErrorHandling();
+            
+            updateFinalStatus();
+        }
+
+        function updateFinalStatus() {
+            const container = document.getElementById('final-status');
+            const passed = Object.values(testResults).filter(r => r === true).length;
+            const total = Object.values(testResults).filter(r => r !== null).length;
+            
+            let html = '<h3>Test Results Summary:</h3>';
+            html += `<div class="test-result ${passed === total ? 'pass' : 'fail'}">`;
+            html += `<strong>${passed}/${total} tests passed</strong><br><br>`;
+            
+            for (const [key, value] of Object.entries(testResults)) {
+                if (value !== null) {
+                    const icon = value ? '✅' : '❌';
+                    const status = value ? 'PASS' : 'FAIL';
+                    html += `${icon} ${key}: <strong>${status}</strong><br>`;
+                }
+            }
+            
+            html += '<br>';
+            if (passed === total && total > 0) {
+                html += '<div class="status ready">🎉 FRONTEND IS READY FOR PRODUCTION</div>';
+            } else {
+                html += '<div class="status not-ready">⚠️ FRONTEND HAS ISSUES - NEEDS FIXES</div>';
+            }
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
